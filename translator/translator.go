@@ -874,6 +874,16 @@ func (t *Translator) TranslateSpec(spec CType, tips ...Tip) GoTypeSpec {
 			} else {
 				wrapper.splitPointers(ptrTip, spec.GetPointers())
 			}
+
+			// use the tag's name since that's the type that will be generated
+			if len(decl.Name) > 0 {
+				wrapper.Raw = string(t.TransformName(TargetType, decl.Name))
+				return wrapper
+			}
+			if base := decl.Spec.GetBase(); len(base) > 0 {
+				wrapper.Raw = string(t.TransformName(TargetType, base))
+				return wrapper
+			}
 		default:
 			wrapper.splitPointers(ptrTip, spec.GetPointers())
 		}
@@ -907,6 +917,10 @@ func (t *Translator) CGoSpec(spec CType, asArg bool) CGoSpec {
 	if decl, ok := t.tagMap[spec.GetTag()]; ok {
 		// count in the pointers of the base type under typedef
 		cgo.Pointers = spec.GetPointers() - decl.Spec.GetPointers()
+		// all types with the same tag need to use the same spec for name
+		// generation or they can end up needing types or values that won't be
+		// generated
+		spec = decl.Spec
 	}
 	if typ, ok := spec.(*CTypeSpec); ok {
 		if typ.Base == "void*" {
